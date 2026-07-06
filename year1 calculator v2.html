@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>حاسبة التقدير النهائي - السنة الأولى</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+    background: #0d0d0d;
+    margin: 0;
+    padding: 24px 16px 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.7rem;
+    margin: 8px 0 20px;
+    color: #fff;
+  }
+  .table-wrap {
+    width: 100%;
+    max-width: 700px;
+    background: #111;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #2a2a2a;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  thead th {
+    background: #161616;
+    color: #fff;
+    padding: 16px 10px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    border-bottom: 1px solid #2a2a2a;
+  }
+  tbody td {
+    padding: 16px 10px;
+    text-align: center;
+    border-top: 1px solid #262626;
+    font-size: 1.05rem;
+    color: #eee;
+  }
+  .subject-cell { font-weight: 500; }
+  select.grade-select {
+    width: 100%;
+    max-width: 150px;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 8px;
+    background: #2a2a2a;
+    color: #eee;
+    font-size: 0.95rem;
+    text-align: center;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+  }
+  select.grade-select:focus { outline: 1px solid #555; }
+  .calc-btn {
+    margin-top: 26px;
+    background: #2f5fd7;
+    color: #fff;
+    border: none;
+    padding: 16px 40px;
+    font-size: 1.1rem;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(47,95,215,0.35);
+  }
+  .calc-btn:hover { background: #244aad; }
+  .result-box {
+    margin-top: 22px;
+    background: #1c1c1c;
+    border: 1px solid #2f5fd7;
+    color: #fff;
+    padding: 18px 30px;
+    border-radius: 10px;
+    font-size: 1.3rem;
+    font-weight: 700;
+    text-align: center;
+    min-width: 260px;
+  }
+</style>
+</head>
+<body>
+
+<h1>حاسبة التقدير النهائي - السنة الأولى</h1>
+
+<div class="table-wrap">
+<table>
+  <thead>
+    <tr>
+      <th>الكردت</th>
+      <th>التقدير</th>
+      <th>المادة</th>
+    </tr>
+  </thead>
+  <tbody id="tableBody">
+    <!-- rows injected by JS -->
+  </tbody>
+</table>
+</div>
+
+<button class="calc-btn" onclick="calculateFinal()">احسب التقدير النهائي</button>
+
+<div class="result-box" id="resultBox">
+  <div id="res100">النتيجة من 100 ستظهر هنا</div>
+  <div id="resGrade" style="margin-top:10px;"></div>
+  <div id="res5" style="margin-top:10px;"></div>
+</div>
+
+<script>
+  // Subjects with credit hours (electives and physical/art education removed)
+  const subjects = [
+    { ar: "تشريح", credits: 4 },
+    { ar: "فيزياء", credits: 3 },
+    { ar: "خلية", credits: 3 },
+    { ar: "أساسيات", credits: 2 },
+    { ar: "حقوق", credits: 2 },
+    { ar: "عربي ١", credits: 1 },
+    { ar: "عربي ٢", credits: 1 },
+    { ar: "ترمنولوجي ١", credits: 1 },
+    { ar: "ترمنولوجي ٢", credits: 1 },
+    { ar: "HSD", credits: 5 },
+    { ar: "كمستري", credits: 3 },
+    { ar: "فسلجة", credits: 3 },
+    { ar: "مايكرو", credits: 3 },
+    { ar: "هيلث", credits: 2 },
+    { ar: "كمبيوتر", credits: 2 },
+  ];
+
+  // Grade -> percentage value (out of 100)
+  const grades = [
+    { label: "امتياز", value: 95 },
+    { label: "جيد جدا", value: 85 },
+    { label: "جيد", value: 75 },
+    { label: "متوسط", value: 65 },
+    { label: "مقبول", value: 55 },
+    { label: "ضعيف", value: 45 },
+  ];
+
+  const tbody = document.getElementById("tableBody");
+
+  subjects.forEach((subj, idx) => {
+    const row = document.createElement("tr");
+    const selectId = `grade_${idx}`;
+    const options = grades.map(g => `<option value="${g.value}">${g.label}</option>`).join("");
+
+    row.innerHTML = `
+      <td>${subj.credits}</td>
+      <td>
+        <select class="grade-select" id="${selectId}" data-weight="${subj.credits}">
+          ${options}
+        </select>
+      </td>
+      <td class="subject-cell">${subj.ar}</td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  // Percentage ranges used to map the final average back to a letter grade
+  const gradeRanges = [
+    { min: 90, label: "امتياز" },
+    { min: 80, label: "جيد جدا" },
+    { min: 70, label: "جيد" },
+    { min: 60, label: "متوسط" },
+    { min: 50, label: "مقبول" },
+    { min: 0,  label: "ضعيف" },
+  ];
+
+  function percentageToGrade(pct) {
+    for (const r of gradeRanges) {
+      if (pct >= r.min) return r.label;
+    }
+    return "ضعيف";
+  }
+
+  function calculateFinal() {
+    const selects = document.querySelectorAll(".grade-select");
+    let weightedSum = 0;
+    let weightSum = 0;
+
+    selects.forEach(sel => {
+      const weight = parseFloat(sel.dataset.weight);
+      const value = parseFloat(sel.value);
+      weightedSum += weight * value;
+      weightSum += weight;
+    });
+
+    const percentage = weightedSum / weightSum;
+    const outOf5 = (percentage / 100) * 5;
+    const gradeLabel = percentageToGrade(percentage);
+
+    document.getElementById("res100").textContent =
+      `النتيجة من 100: ${percentage.toFixed(2)}`;
+    document.getElementById("resGrade").textContent =
+      `التقدير: ${gradeLabel}`;
+    document.getElementById("res5").textContent =
+      `النتيجة من 5: ${outOf5.toFixed(2)}`;
+  }
+</script>
+
+</body>
+</html>
